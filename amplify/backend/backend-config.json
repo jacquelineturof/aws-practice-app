@@ -1,0 +1,26 @@
+{
+	"auth": {
+		"amplifynotetakerv26af33cec": {
+			"service": "Cognito",
+			"providerPlugin": "awscloudformation",
+			"dependsOn": []
+		}
+	},
+	"api": {
+		"amplifynotetakerv2": {
+			"service": "AppSync",
+			"providerPlugin": "awscloudformation",
+			"output": {
+				"authConfig": {
+					"additionalAuthenticationProviders": [],
+					"defaultAuthentication": {
+						"authenticationType": "AMAZON_COGNITO_USER_POOLS",
+						"userPoolConfig": {
+							"userPoolId": "authamplifynotetakerv26af33cec"
+						}
+					}
+				}
+			}
+		}
+	}
+}
