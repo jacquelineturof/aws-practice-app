@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { withAuthenticator } from 'aws-amplify-react'
 import { API, graphqlOperation } from 'aws-amplify'
-import { createNote, deleteNote } from './graphql/mutations'
+import { createNote, deleteNote, updateNote } from './graphql/mutations'
 import { listNotes } from './graphql/queries'
 
 function App() {
   const [ notes, setNotes ] = useState([])
   const [ note, setNote ] = useState('')
+  const [ id, setId ] = useState('')
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -17,21 +18,36 @@ function App() {
     fetchNotes()
   }, [])
 
+  const hasExistingNote = id => {
+    if (id) {
+      // is the id a valid id?
+      const isNote = notes.findIndex(note => note.id === id) > -1
+      return isNote
+    }
+
+    return false
+  }
+
   const onAddNote = async e => {
     e.preventDefault()
     
-    const input = {
-      name: note
-    }
-
-    try {
-      const response = await API.graphql(graphqlOperation(createNote, { input }))
-      const newNote = response.data.createNote
-      const updatedNotes = [  newNote, ...notes ]
-      setNotes(updatedNotes)
-      setNote('')
-    } catch (e) {
-      console.log(e)
+    // check if we have an existing note, if so update it
+    if (hasExistingNote(id)) {
+      onHandleUpdateNote()
+    } else {
+      const input = {
+        name: note
+      }
+  
+      try {
+        const response = await API.graphql(graphqlOperation(createNote, { input }))
+        const newNote = response.data.createNote
+        const updatedNotes = [  newNote, ...notes ]
+        setNotes(updatedNotes)
+        setNote('')
+      } catch (e) {
+        console.log(e)
+      }
     }
   }
 
@@ -43,6 +59,31 @@ function App() {
       const deletedNoteID = result.data.deleteNote.id
       const updatedNotes = notes.filter(note => note.id !== deletedNoteID)
       setNotes(updatedNotes)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  const onHandleSetNote = ({ name, id })=> {
+    setNote(name)
+    setId(id)
+  }
+
+  const onHandleUpdateNote = async () => {
+    const input = { id, name: note }
+
+    try {
+      const result = await API.graphql(graphqlOperation(updateNote, { input }))
+      const updatedNote = result.data.updateNote
+      const index = notes.findIndex(note => note.id === updatedNote.id)
+      const updatedNotes = [
+        ...notes.slice(0, index),
+        updatedNote,
+        ...notes.slice(index + 1)
+      ]
+      setNotes(updatedNotes)
+      setNote('')
+      setId('')
     } catch (e) {
       console.log(e)
     }
@@ -61,14 +102,14 @@ function App() {
           onChange = { e => setNote(e.target.value) }
           value = { note } />
         <button className = "pa2 f4" type = "submit">
-          Add Note
+          { id ? "Update Note" : "Add Note" }
         </button>
       </form>
 
       <div>
         { notes.map(item => (
           <div key = { item.id } className = "flex items-center">
-            <li className = "list pa1 f3">
+            <li onClick = { () => onHandleSetNote(item) } className = "list pa1 f3">
               { item.name }
             </li>
             <button 
